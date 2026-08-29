@@ -2,6 +2,10 @@
 
 Pokedex application used for building a CI/CD pipeline with GitHub Actions.
 
+- Deployed application: https://pokedex-w2xe.onrender.com
+- The application with a pipeline of its own:
+  https://github.com/Rororo06/openfullstack
+
 ## Commands
 
 Run `npm install` inside the project folder first.
@@ -26,12 +30,16 @@ The workflows live in [.github/workflows](./.github/workflows):
 - `pipeline.yml` – runs on pushes to main and on pull requests, in the jobs
   `lint_and_test`, `deploy`, `notify_success`, `notify_failure` and
   `tag_release`
+- `health_check.yml` – asks the deployed app once a day whether it is healthy,
+  and can also be started by hand
 
 Only pushes to the main branch are deployed and tagged, and a commit message
-containing `#skip` leaves both out. The deployment is triggered with a Render
-deploy hook and the build notifications are sent to Discord; both addresses
-come from the repository secrets `RENDER_DEPLOY_HOOK` and `DISCORD_WEBHOOK`.
-Releases are tagged with a patch bump of the previous version.
+containing `#skip` leaves both out. A deployment is started through the Render
+API and is followed by a wait until the new version answers, so a broken
+deployment fails the pipeline. The build notifications are sent to Discord.
+The credentials come from the repository secrets `RENDER_API_KEY`,
+`RENDER_SERVICE_ID` and `DISCORD_WEBHOOK`. Releases are tagged with a patch
+bump of the previous version.
 
 ## Endpoints
 

@@ -1,0 +1,24 @@
+name: Health check
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * *'
+
+jobs:
+  health_check:
+    runs-on: ubuntu-latest
+    env:
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+    steps:
+      - name: Ask the deployed app how it is doing
+        run: curl --fail --silent --show-error https://pokedex-w2xe.onrender.com/health
+      - name: Report an unhealthy app
+        if: ${{ failure() && env.DISCORD_WEBHOOK != '' }}
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: failure
+          title: The deployed app does not answer
+          description: https://pokedex-w2xe.onrender.com/health
+          nodetail: true

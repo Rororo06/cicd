@@ -34,11 +34,26 @@ jobs:
     if: ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
     runs-on: ubuntu-latest
     env:
-      RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
     steps:
       - name: Trigger deployment
-        if: ${{ env.RENDER_DEPLOY_HOOK != '' }}
-        run: curl "$RENDER_DEPLOY_HOOK"
+        run: |
+          curl --fail --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $RENDER_API_KEY" \
+            --header 'Content-Type: application/json' \
+            --data '{"clearCache": "do_not_clear"}' \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys"
+      - name: Wait until the deployed app answers
+        run: |
+          for i in $(seq 1 30); do
+            sleep 20
+            if curl --fail --silent https://pokedex-w2xe.onrender.com/health; then
+              exit 0
+            fi
+          done
+          exit 1
 
   notify_success:
     needs: [deploy]
