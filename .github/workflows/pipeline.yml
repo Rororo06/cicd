@@ -4,12 +4,12 @@ on:
   push:
     branches:
       - main
-
-env:
-  RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize]
 
 jobs:
-  simple_deployment_pipeline:
+  lint_and_test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,6 +28,62 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Run end to end tests
         run: npm run test:e2e
+
+  deploy:
+    needs: [lint_and_test]
+    if: ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Trigger deployment
-        if: ${{ env.RENDER_DEPLOY_HOOK != '' }}
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
         run: curl "$RENDER_DEPLOY_HOOK"
+
+  notify_success:
+    needs: [deploy]
+    if: ${{ success() && github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    env:
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+    steps:
+      - name: Report a successful deployment
+        if: ${{ env.DISCORD_WEBHOOK != '' }}
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: success
+          title: A new version has been deployed
+          description: ${{ github.event.head_commit.url }}
+          nodetail: true
+
+  notify_failure:
+    needs: [lint_and_test, deploy]
+    if: ${{ always() && (needs.lint_and_test.result == 'failure' || needs.deploy.result == 'failure') }}
+    runs-on: ubuntu-latest
+    env:
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+    steps:
+      - name: Report a broken build
+        if: ${{ env.DISCORD_WEBHOOK != '' }}
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: failure
+          title: Build failed
+          description: |
+            commit ${{ github.sha }} by ${{ github.actor }}
+            ${{ github.event.head_commit.url }}
+
+  tag_release:
+    needs: [deploy]
+    if: ${{ github.event_name == 'push' && !contains(join(github.event.commits.*.message, ' '), '#skip') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Bump version and push tag
+        uses: anothrNick/github-tag-action@4ed44965e0db8dab2b466a16da04aec3cc312fd8
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_BUMP: patch
