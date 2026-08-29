@@ -48,3 +48,6 @@ used by the pipeline and the hosting service:
 
 - `/health` – health check used by Render
 - `/version` – version string, changed to verify that a new version is live
+
+Adding `#skip` to a commit message leaves the deployment and the tagging out.
+
