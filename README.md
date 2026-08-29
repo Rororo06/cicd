@@ -23,11 +23,15 @@ The end to end tests start the production server themselves, so run
 The workflows live in [.github/workflows](./.github/workflows):
 
 - `hello.yml` – prints a greeting, the date and the directory contents
-- `pipeline.yml` – lint, build, Jest tests, Playwright end to end tests and
-  the deployment to the hosting service
+- `pipeline.yml` – runs on pushes to main and on pull requests, in the jobs
+  `lint_and_test`, `deploy`, `notify_success`, `notify_failure` and
+  `tag_release`
 
-The deployment is triggered with a Render deploy hook, which is stored in the
-repository secret `RENDER_DEPLOY_HOOK`.
+Only pushes to the main branch are deployed and tagged, and a commit message
+containing `#skip` leaves both out. The deployment is triggered with a Render
+deploy hook and the build notifications are sent to Discord; both addresses
+come from the repository secrets `RENDER_DEPLOY_HOOK` and `DISCORD_WEBHOOK`.
+Releases are tagged with a patch bump of the previous version.
 
 ## Endpoints
 
