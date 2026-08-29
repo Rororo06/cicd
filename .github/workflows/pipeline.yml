@@ -5,6 +5,9 @@ on:
     branches:
       - main
 
+env:
+  RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+
 jobs:
   simple_deployment_pipeline:
     runs-on: ubuntu-latest
@@ -26,5 +29,5 @@ jobs:
       - name: Run end to end tests
         run: npm run test:e2e
       - name: Trigger deployment
-        if: ${{ secrets.RENDER_DEPLOY_HOOK != '' }}
-        run: curl ${{ secrets.RENDER_DEPLOY_HOOK }}
+        if: ${{ env.RENDER_DEPLOY_HOOK != '' }}
+        run: curl "$RENDER_DEPLOY_HOOK"
